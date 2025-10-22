@@ -93,3 +93,40 @@ export async function getUploadToken() {
 
   return { token: session.access_token };
 }
+
+export async function updateVideoAfterTranscode(
+  videoId: string,
+  hlsMasterUrl: string,
+  posterUrl: string,
+  durationSeconds: number
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Not authenticated" };
+  }
+
+  const { error } = await supabase
+    .from("videos")
+    .update({
+      hls_master_url: hlsMasterUrl,
+      poster_url: posterUrl,
+      duration_seconds: durationSeconds,
+      status: "public",
+      published_at: new Date().toISOString(),
+    })
+    .eq("id", videoId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/studio");
+  revalidatePath("/");
+
+  return { success: true };
+}

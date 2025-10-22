@@ -13,6 +13,7 @@ interface VideoUploadFormProps {
   fileSize: number;
   mimeType: string;
   onCancel: () => void;
+  onStartTranscode: (videoId: string) => void;
 }
 
 export function VideoUploadForm({
@@ -21,6 +22,7 @@ export function VideoUploadForm({
   fileSize,
   mimeType,
   onCancel,
+  onStartTranscode,
 }: VideoUploadFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +64,9 @@ export function VideoUploadForm({
       return;
     }
 
-    router.push("/studio");
+    if (result.videoId) {
+      onStartTranscode(result.videoId);
+    }
   }
 
   return (
@@ -163,7 +167,7 @@ export function VideoUploadForm({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? "Publishing..." : "Publish Video"}
+              {isSubmitting ? "Starting..." : "Start Processing"}
             </Button>
           </div>
         </form>
