@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 
 interface VideoPlayerProps {
+  videoId: string;
   hlsUrl: string;
   posterUrl?: string;
   onTimeUpdate: (currentTime: number) => void;
@@ -13,6 +14,7 @@ interface VideoPlayerProps {
 }
 
 export function VideoPlayer({
+  videoId,
   hlsUrl,
   posterUrl,
   onTimeUpdate,
@@ -23,6 +25,9 @@ export function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const [sessionId] = useState(() => Math.random().toString(36).substring(7));
+  const [viewTracked, setViewTracked] = useState(false);
+  const [lastWatchTime, setLastWatchTime] = useState(0);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -84,6 +89,37 @@ export function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    const trackView = async () => {
+      if (!viewTracked && video.currentTime > 3) {
+        setViewTracked(true);
+        try {
+          await fetch("/api/analytics/track-view", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ videoId, sessionId }),
+          });
+        } catch (error) {
+          console.error("Failed to track view:", error);
+        }
+      }
+    };
+
+    const trackWatchTime = async (currentTime: number) => {
+      const watchDuration = Math.floor(currentTime - lastWatchTime);
+      if (watchDuration > 5) {
+        setLastWatchTime(currentTime);
+        try {
+          await fetch("/api/analytics/track-watch-time", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ videoId, watchDuration, sessionId }),
+          });
+        } catch (error) {
+          console.error("Failed to track watch time:", error);
+        }
+      }
+    };
+
     const handlePlay = () => {
       onPlay();
 
@@ -93,7 +129,10 @@ export function VideoPlayer({
 
       heartbeatRef.current = setInterval(() => {
         if (video && !video.paused) {
-          onTimeUpdate(video.currentTime);
+          const currentTime = video.currentTime;
+          onTimeUpdate(currentTime);
+          trackView();
+          trackWatchTime(currentTime);
         }
       }, 10000);
     };
@@ -103,7 +142,9 @@ export function VideoPlayer({
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
       }
-      onPause(video.currentTime);
+      const currentTime = video.currentTime;
+      onPause(currentTime);
+      trackWatchTime(currentTime);
     };
 
     const handleEnded = () => {
@@ -111,7 +152,9 @@ export function VideoPlayer({
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
       }
-      onEnded(video.currentTime);
+      const currentTime = video.currentTime;
+      onEnded(currentTime);
+      trackWatchTime(currentTime);
     };
 
     video.addEventListener("play", handlePlay);
@@ -126,7 +169,7 @@ export function VideoPlayer({
         clearInterval(heartbeatRef.current);
       }
     };
-  }, [onPlay, onPause, onEnded, onTimeUpdate]);
+  }, [videoId, sessionId, viewTracked, lastWatchTime, onPlay, onPause, onEnded, onTimeUpdate]);
 
   return (
     <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">

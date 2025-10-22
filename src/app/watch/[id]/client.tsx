@@ -74,6 +74,7 @@ export function WatchPageClient({
         <div className="lg:col-span-2">
           <div className="space-y-4">
             <VideoPlayer
+              videoId={videoId}
               hlsUrl={hlsUrl}
               posterUrl={posterUrl || undefined}
               onPlay={handlePlay}
