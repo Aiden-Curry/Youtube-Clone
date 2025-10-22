@@ -2,14 +2,30 @@
 
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, MoreVertical, Flag, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { postComment } from "@/lib/watch/actions";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  createComment,
+  editComment,
+  deleteComment,
+  reportComment,
+} from "@/lib/comments/actions";
+import { validateContent } from "@/lib/profanity-filter";
 
 interface Comment {
   id: string;
   content: string;
   created_at: string;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  user_id: string;
   user: {
     display_name: string;
     username: string;
@@ -21,6 +37,7 @@ interface Comment {
 interface CommentsSectionProps {
   videoId: string;
   comments: Comment[];
+  currentUserId?: string;
   currentUser?: {
     display_name: string;
     username: string;
@@ -31,11 +48,13 @@ interface CommentsSectionProps {
 function CommentItem({
   comment,
   videoId,
+  currentUserId,
   currentUser,
   isReply = false,
 }: {
   comment: Comment;
   videoId: string;
+  currentUserId?: string;
   currentUser?: {
     display_name: string;
     username: string;
@@ -46,20 +65,98 @@ function CommentItem({
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+
+  if (comment.deleted_at) {
+    return (
+      <div className={isReply ? "ml-12" : ""}>
+        <div className="rounded-lg bg-muted p-3 text-sm italic text-muted-foreground">
+          [Comment deleted]
+        </div>
+      </div>
+    );
+  }
 
   const handleReply = async () => {
     if (!replyContent.trim() || !currentUser) return;
 
-    setIsSubmitting(true);
-    const result = await postComment(videoId, replyContent, comment.id);
+    const validation = validateContent(replyContent);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
 
-    if (!result.error) {
+    setIsSubmitting(true);
+    const result = await createComment(videoId, replyContent, comment.id);
+
+    if (result.error) {
+      alert(result.error);
+    } else {
       setReplyContent("");
       setShowReplyForm(false);
     }
 
     setIsSubmitting(false);
   };
+
+  const handleEdit = async () => {
+    if (!editContent.trim()) return;
+
+    const validation = validateContent(editContent);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await editComment(comment.id, editContent);
+
+    if (result.error) {
+      alert(result.error);
+    } else {
+      setIsEditing(false);
+    }
+
+    setIsSubmitting(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this comment?")) return;
+
+    setIsSubmitting(true);
+    const result = await deleteComment(comment.id);
+
+    if (result.error) {
+      alert(result.error);
+    }
+
+    setIsSubmitting(false);
+  };
+
+  const handleReport = async () => {
+    if (!reportReason.trim()) {
+      alert("Please provide a reason for reporting");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await reportComment(comment.id, reportReason);
+
+    if (result.error) {
+      alert(result.error);
+    } else {
+      alert("Comment reported successfully");
+      setShowReportDialog(false);
+      setReportReason("");
+    }
+
+    setIsSubmitting(false);
+  };
+
+  const isOwner = currentUserId === comment.user_id;
 
   return (
     <div className={isReply ? "ml-12" : ""}>
@@ -77,23 +174,116 @@ function CommentItem({
         )}
 
         <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm">
-              {comment.user.display_name}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              @{comment.user.username}
-            </span>
-            <span className="text-xs text-muted-foreground">•</span>
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(comment.created_at), {
-                addSuffix: true,
-              })}
-            </span>
-          </div>
-          <p className="text-sm">{comment.content}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">
+                {comment.user.display_name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                @{comment.user.username}
+              </span>
+              <span className="text-xs text-muted-foreground">•</span>
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(comment.created_at), {
+                  addSuffix: true,
+                })}
+              </span>
+              {comment.edited_at && (
+                <span className="text-xs italic text-muted-foreground">
+                  (edited)
+                </span>
+              )}
+            </div>
 
-          {!isReply && currentUser && (
+            {currentUser && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isOwner && (
+                    <>
+                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleDelete}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {!isOwner && (
+                    <DropdownMenuItem onClick={() => setShowReportDialog(true)}>
+                      <Flag className="mr-2 h-4 w-4" />
+                      Report
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {isEditing ? (
+            <div className="space-y-2">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isSubmitting}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleEdit} disabled={isSubmitting}>
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditContent(comment.content);
+                  }}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm">{comment.content}</p>
+          )}
+
+          {showReportDialog && (
+            <div className="mt-2 space-y-2 rounded-lg border p-3">
+              <p className="text-sm font-medium">Report comment</p>
+              <Input
+                placeholder="Reason for reporting..."
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                disabled={isSubmitting}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleReport} disabled={isSubmitting}>
+                  Submit Report
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setShowReportDialog(false);
+                    setReportReason("");
+                  }}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!isReply && currentUser && !isEditing && (
             <Button
               variant="ghost"
               size="sm"
@@ -145,6 +335,7 @@ function CommentItem({
               key={reply.id}
               comment={reply}
               videoId={videoId}
+              currentUserId={currentUserId}
               currentUser={currentUser}
               isReply
             />
@@ -158,6 +349,7 @@ function CommentItem({
 export function CommentsSection({
   videoId,
   comments,
+  currentUserId,
   currentUser,
 }: CommentsSectionProps) {
   const [commentContent, setCommentContent] = useState("");
@@ -166,10 +358,18 @@ export function CommentsSection({
   const handleSubmit = async () => {
     if (!commentContent.trim() || !currentUser) return;
 
-    setIsSubmitting(true);
-    const result = await postComment(videoId, commentContent);
+    const validation = validateContent(commentContent);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
 
-    if (!result.error) {
+    setIsSubmitting(true);
+    const result = await createComment(videoId, commentContent);
+
+    if (result.error) {
+      alert(result.error);
+    } else {
       setCommentContent("");
     }
 
@@ -228,6 +428,7 @@ export function CommentsSection({
             key={comment.id}
             comment={comment}
             videoId={videoId}
+            currentUserId={currentUserId}
             currentUser={currentUser}
           />
         ))}
