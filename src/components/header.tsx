@@ -1,12 +1,14 @@
-"use client";
-
 import { Search, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/user-menu";
+import { getCurrentUser } from "@/lib/auth/helpers";
 import Link from "next/link";
 
-export function Header() {
+export async function Header() {
+  const user = await getCurrentUser();
+
   return (
     <header className="fixed top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center gap-4 px-4">
@@ -34,9 +36,13 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="outline" size="sm">
-            Sign In
-          </Button>
+          {user ? (
+            <UserMenu user={user} />
+          ) : (
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/auth/signin">Sign In</Link>
+            </Button>
+          )}
         </div>
       </div>
     </header>
