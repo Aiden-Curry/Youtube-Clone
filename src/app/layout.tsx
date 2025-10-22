@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
+import { CookieConsent } from "@/components/cookie-consent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
           <Header />
           <Sidebar />
           <main className="ml-0 mt-16 md:ml-64">{children}</main>
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

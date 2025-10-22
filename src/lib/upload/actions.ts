@@ -12,6 +12,7 @@ export interface CreateVideoData {
   originalFilename: string;
   fileSize: number;
   mimeType: string;
+  ageRestricted?: boolean;
 }
 
 export async function createVideoRecord(data: CreateVideoData) {
@@ -56,6 +57,7 @@ export async function createVideoRecord(data: CreateVideoData) {
       status: "processing",
       original_url: data.storagePath,
       duration_seconds: 0,
+      age_restricted: data.ageRestricted || false,
     })
     .select()
     .single();

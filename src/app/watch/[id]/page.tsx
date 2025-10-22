@@ -29,6 +29,7 @@ export default async function WatchPage({
       published_at,
       hls_master_url,
       poster_url,
+      age_restricted,
       channel:channels!inner(
         id,
         name,
@@ -173,6 +174,7 @@ export default async function WatchPage({
       comments={topLevelComments}
       currentUser={currentUser}
       recommendedVideos={recommendedVideos}
+      isAgeRestricted={video.age_restricted || false}
     />
   );
 }

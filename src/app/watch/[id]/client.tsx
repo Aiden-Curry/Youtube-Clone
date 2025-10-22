@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { VideoPlayer } from "@/components/watch/video-player";
 import { VideoInfo } from "@/components/watch/video-info";
 import { ChannelCard } from "@/components/watch/channel-card";
 import { CommentsSection } from "@/components/watch/comments-section";
 import { UpNext } from "@/components/watch/up-next";
+import { AgeGate } from "@/components/age-gate";
 import { trackPlayEvent, incrementViewCount } from "@/lib/watch/actions";
 
 interface WatchPageClientProps {
@@ -18,6 +19,7 @@ interface WatchPageClientProps {
   comments: any[];
   currentUser: any;
   recommendedVideos: any[];
+  isAgeRestricted: boolean;
 }
 
 export function WatchPageClient({
@@ -30,10 +32,26 @@ export function WatchPageClient({
   comments,
   currentUser,
   recommendedVideos,
+  isAgeRestricted,
 }: WatchPageClientProps) {
   const lastPositionRef = useRef(0);
   const viewCountedRef = useRef(false);
   const watchStartRef = useRef(0);
+  const [ageVerified, setAgeVerified] = useState(false);
+
+  useEffect(() => {
+    if (!isAgeRestricted) {
+      setAgeVerified(true);
+      return;
+    }
+
+    const verified = localStorage.getItem("age_verified") === "true";
+    setAgeVerified(verified);
+  }, [isAgeRestricted]);
+
+  if (isAgeRestricted && !ageVerified) {
+    return <AgeGate onVerify={() => setAgeVerified(true)} />;
+  }
 
   const handlePlay = async () => {
     watchStartRef.current = Date.now();

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { createVideoRecord } from "@/lib/upload/actions";
 import { useRouter } from "next/navigation";
+import { AlertCircle } from "lucide-react";
 
 interface VideoUploadFormProps {
   storagePath: string;
@@ -27,6 +29,7 @@ export function VideoUploadForm({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ageRestricted, setAgeRestricted] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,6 +59,7 @@ export function VideoUploadForm({
       originalFilename,
       fileSize,
       mimeType,
+      ageRestricted,
     });
 
     if (result.error) {
@@ -133,6 +137,43 @@ export function VideoUploadForm({
             <p className="text-xs text-muted-foreground">
               Choose who can see your video
             </p>
+          </div>
+
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-orange-500" />
+                  <label
+                    htmlFor="age-restricted"
+                    className="text-sm font-medium"
+                  >
+                    Age Restriction
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Restrict this video to viewers 18 and older
+                </p>
+              </div>
+              <Switch
+                id="age-restricted"
+                checked={ageRestricted}
+                onCheckedChange={setAgeRestricted}
+                disabled={isSubmitting}
+              />
+            </div>
+            {ageRestricted && (
+              <div className="rounded-lg bg-orange-50 p-3 text-xs dark:bg-orange-950">
+                <p className="font-medium text-orange-900 dark:text-orange-100">
+                  Age-restricted content
+                </p>
+                <p className="mt-1 text-orange-800 dark:text-orange-200">
+                  This video will only be visible to logged-in users who are 18
+                  or older. Use this for content with mature themes, violence,
+                  profanity, or adult material.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg bg-muted p-4 text-sm">
