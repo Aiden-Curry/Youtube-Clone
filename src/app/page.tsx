@@ -1,110 +1,156 @@
-import { VideoCard } from "@/components/video-card";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/helpers";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { Play, TrendingUp, Clock, Sparkles } from "lucide-react";
 
-const mockVideos = [
-  {
-    id: 1,
-    title: "Getting Started with Next.js 14 - Complete Tutorial",
-    channel: "Web Dev Pro",
-    views: "125K views",
-    timestamp: "2 days ago",
-  },
-  {
-    id: 2,
-    title: "Building Modern UIs with Tailwind CSS",
-    channel: "Design Masters",
-    views: "89K views",
-    timestamp: "5 days ago",
-  },
-  {
-    id: 3,
-    title: "TypeScript Best Practices in 2024",
-    channel: "Code Academy",
-    views: "203K views",
-    timestamp: "1 week ago",
-  },
-  {
-    id: 4,
-    title: "React Server Components Explained",
-    channel: "React Weekly",
-    views: "156K views",
-    timestamp: "3 days ago",
-  },
-  {
-    id: 5,
-    title: "Database Design Fundamentals",
-    channel: "Tech Education",
-    views: "78K views",
-    timestamp: "1 week ago",
-  },
-  {
-    id: 6,
-    title: "Advanced Git Techniques",
-    channel: "Developer Tools",
-    views: "92K views",
-    timestamp: "4 days ago",
-  },
-  {
-    id: 7,
-    title: "REST API vs GraphQL - Which to Choose?",
-    channel: "Backend Bytes",
-    views: "134K views",
-    timestamp: "2 weeks ago",
-  },
-  {
-    id: 8,
-    title: "CSS Grid Layout Masterclass",
-    channel: "Frontend Focus",
-    views: "67K views",
-    timestamp: "6 days ago",
-  },
-  {
-    id: 9,
-    title: "Docker for Beginners",
-    channel: "DevOps Daily",
-    views: "189K views",
-    timestamp: "1 week ago",
-  },
-  {
-    id: 10,
-    title: "Performance Optimization Tips",
-    channel: "Web Performance",
-    views: "112K views",
-    timestamp: "3 days ago",
-  },
-  {
-    id: 11,
-    title: "Understanding Async/Await in JavaScript",
-    channel: "JS Mastery",
-    views: "145K views",
-    timestamp: "5 days ago",
-  },
-  {
-    id: 12,
-    title: "Building a Full-Stack App from Scratch",
-    channel: "Full Stack Dev",
-    views: "234K views",
-    timestamp: "2 weeks ago",
-  },
-];
+interface Video {
+  id: string;
+  title: string;
+  poster_url: string | null;
+  view_count: number;
+  published_at: string;
+  duration_seconds: number;
+  channel_name: string;
+  channel_handle: string;
+}
 
-export default function Home() {
+function VideoGrid({ videos, title, icon }: { videos: Video[]; title: string; icon: React.ReactNode }) {
+  if (videos.length === 0) return null;
+
   return (
-    <div className="container py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Recommended</h1>
+    <div className="mb-12">
+      <div className="mb-6 flex items-center gap-2">
+        {icon}
+        <h2 className="text-2xl font-bold">{title}</h2>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {mockVideos.map((video) => (
-          <VideoCard
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {videos.map((video) => (
+          <Link
             key={video.id}
-            title={video.title}
-            channel={video.channel}
-            views={video.views}
-            timestamp={video.timestamp}
-          />
+            href={`/watch/${video.id}`}
+            className="group space-y-3"
+          >
+            <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+              {video.poster_url ? (
+                <img
+                  src={video.poster_url}
+                  alt={video.title}
+                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <Play className="h-12 w-12 text-muted-foreground" />
+                </div>
+              )}
+              <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-1 text-xs text-white">
+                {Math.floor(video.duration_seconds / 60)}:
+                {(video.duration_seconds % 60).toString().padStart(2, "0")}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="line-clamp-2 font-semibold group-hover:text-primary">
+                {video.title}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {video.channel_name}
+              </p>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span>{video.view_count.toLocaleString()} views</span>
+                <span>•</span>
+                <span>
+                  {formatDistanceToNow(new Date(video.published_at), {
+                    addSuffix: true,
+                  })}
+                </span>
+              </div>
+            </div>
+          </Link>
         ))}
       </div>
+    </div>
+  );
+}
+
+export default async function Home() {
+  const supabase = await createClient();
+  const currentUser = await getCurrentUser();
+
+  const { data: trendingData } = await supabase.rpc("get_trending_videos", {
+    limit_count: 12,
+  });
+
+  const { data: freshData } = await supabase.rpc("get_fresh_videos", {
+    limit_count: 12,
+  });
+
+  let personalizedData = null;
+  if (currentUser) {
+    const { data } = await supabase.rpc("get_personalized_videos", {
+      user_id_param: currentUser.id,
+      limit_count: 12,
+    });
+    personalizedData = data;
+  }
+
+  const trendingVideos: Video[] = (trendingData || []).map((v: any) => ({
+    id: v.id,
+    title: v.title,
+    poster_url: v.poster_url,
+    view_count: v.view_count,
+    published_at: v.published_at,
+    duration_seconds: v.duration_seconds,
+    channel_name: v.channel_name,
+    channel_handle: v.channel_handle,
+  }));
+
+  const freshVideos: Video[] = (freshData || []).map((v: any) => ({
+    id: v.id,
+    title: v.title,
+    poster_url: v.poster_url,
+    view_count: v.view_count,
+    published_at: v.published_at,
+    duration_seconds: v.duration_seconds,
+    channel_name: v.channel_name,
+    channel_handle: v.channel_handle,
+  }));
+
+  const personalizedVideos: Video[] = personalizedData
+    ? personalizedData.map((v: any) => ({
+        id: v.id,
+        title: v.title,
+        poster_url: v.poster_url,
+        view_count: v.view_count,
+        published_at: v.published_at,
+        duration_seconds: v.duration_seconds,
+        channel_name: v.channel_name,
+        channel_handle: v.channel_handle,
+      }))
+    : [];
+
+  return (
+    <div className="container py-8">
+      {personalizedVideos.length > 0 && (
+        <VideoGrid
+          videos={personalizedVideos}
+          title="For You"
+          icon={<Sparkles className="h-6 w-6" />}
+        />
+      )}
+
+      <VideoGrid
+        videos={trendingVideos}
+        title="Trending"
+        icon={<TrendingUp className="h-6 w-6" />}
+      />
+
+      <VideoGrid
+        videos={freshVideos}
+        title="Fresh"
+        icon={<Clock className="h-6 w-6" />}
+      />
     </div>
   );
 }
