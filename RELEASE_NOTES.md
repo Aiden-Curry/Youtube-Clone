@@ -11,7 +11,7 @@ Error: `turbo.createProject` is not supported by the wasm bindings
 
 **Root Cause**: Next.js 16 enables Turbopack by default, which has WASM binding compatibility issues in bolt.new's build environment.
 
-**Solution**: Downgraded to Next.js 15.5.6, which uses webpack by default and doesn't have these issues.
+**Solution**: Downgraded to Next.js 15.1.0, which uses webpack by default and doesn't have these issues.
 
 ---
 
@@ -19,7 +19,7 @@ Error: `turbo.createProject` is not supported by the wasm bindings
 
 ### 1. Next.js Version Downgrade
 - **From**: Next.js 16.0.0
-- **To**: Next.js 15.5.6
+- **To**: Next.js 15.1.0
 - **Reason**: Avoid Turbopack WASM binding issues in bolt.new
 
 ### 2. Build Script Simplified
@@ -209,7 +209,7 @@ To verify this fix worked:
 ```bash
 # Check Next.js version
 npm list next
-# Should show: next@15.5.6
+# Should show: next@15.1.0
 
 # Test build
 npm run build
@@ -217,7 +217,7 @@ npm run build
 
 # Check package.json
 grep "next" package.json
-# Should show: "next": "^15.1.0"
+# Should show: "next": "15.1.0"
 ```
 
 ---
