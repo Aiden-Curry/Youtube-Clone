@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  turbopack: {},
   webpack: (config) => {
     return config;
   },

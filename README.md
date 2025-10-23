@@ -111,7 +111,7 @@ npm run test:e2e:ui
 npm run build
 ```
 
-**Note**: The build uses webpack instead of Turbopack due to WASM binding issues in Next.js 16. This is configured in `package.json` as `next build --webpack`.
+**Note**: The build is configured to use webpack (`--webpack` flag) to avoid Turbopack WASM binding issues in Next.js 16. The project also has an empty `turbopack: {}` config in `next.config.ts` for compatibility.
 
 ### Linting & Formatting
 

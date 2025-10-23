@@ -492,18 +492,17 @@ Enable Supabase backups:
 
 **Issue**: `turbo.createProject is not supported by the wasm bindings`
 
-**Solution**: Use webpack instead of Turbopack for builds.
+**Solution**: The project is configured with an empty `turbopack: {}` in `next.config.ts` to resolve this.
 
-The project is configured to use `--webpack` flag in build script:
-```json
-"build": "next build --webpack"
-```
+Next.js 16 defaults to Turbopack which has WASM binding issues in certain environments (like bolt.new). The empty turbopack config tells Next.js we're aware of this and allows the build to proceed successfully.
 
-This is already set in `package.json`. Next.js 16 defaults to Turbopack which has WASM binding issues in certain environments.
+**Build commands that work**:
+- `npm run build` (recommended, uses `--webpack` flag)
+- `npx next build` (works with turbopack config)
 
 **For deployment platforms**:
-- Ensure build command is: `npm run build` (uses webpack)
-- Do not use: `next build` directly
+- Use build command: `npm run build`
+- The build will succeed automatically
 
 ### Videos Not Playing
 
