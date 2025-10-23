@@ -87,14 +87,9 @@ Before deploying, you need:
 
 ## ⚠️ Critical Build Information
 
-**IMPORTANT:** The build MUST use webpack, not Turbopack.
+**Build Command:** `npm run build`
 
-✅ **Correct:** `npm run build`  
-❌ **Wrong:** `next build`
-
-This is already configured. Just use `npm run build` as the build command.
-
-**Why?** Next.js 16 Turbopack has WASM binding issues in bolt.new. The project uses webpack via the `--webpack` flag to avoid this.
+**Note:** The project uses Next.js 15 to avoid Turbopack WASM binding issues that exist in Next.js 16 on bolt.new. This ensures stable builds across all deployment platforms.
 
 ---
 

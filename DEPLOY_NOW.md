@@ -2,16 +2,12 @@
 
 ## ⚠️ CRITICAL: Build Configuration
 
-The build **MUST** use this exact command:
+The build uses this command:
 ```bash
 npm run build
 ```
 
-**DO NOT USE:**
-- ❌ `next build`
-- ❌ `npx next build`
-
-**Why?** Next.js 16 Turbopack has WASM binding issues. The project is configured to use webpack via the `--webpack` flag.
+**Note:** The project uses Next.js 15 to avoid Turbopack WASM binding issues that exist in Next.js 16 on bolt.new.
 
 ---
 
@@ -102,9 +98,9 @@ After deployment:
 ### Build Error: "turbo.createProject is not supported"
 
 **Solution:**
+- This has been fixed by using Next.js 15 instead of 16
 - Verify build command is: `npm run build`
-- Check `package.json` has: `"build": "next build --webpack"`
-- Clear cache and redeploy
+- If issue persists, check `package.json` has: `"next": "^15.1.0"`
 
 ### "Website not found" or "Failed to fetch"
 
