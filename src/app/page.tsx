@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';  // or: export const revalidate = 0;
+
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/helpers";
 import Link from "next/link";
